@@ -4,10 +4,13 @@ import { Header } from '@/components/Header';
 import { AddTaskForm } from '@/components/AddTaskForm';
 import { TaskList } from '@/components/TaskList';
 import { PremiumModal } from '@/components/PremiumModal';
+import { AuthModal } from '@/components/AuthModal';
 import { useTheme } from '@/hooks/useTheme';
 import { useSchedule } from '@/hooks/useSchedule';
+import { useAuth } from '@/hooks/useAuth';
 import { getNotifPermission, requestNotifPermission } from '@/lib/notifications';
 import { unlockAudio } from '@/lib/audio';
+import { storage } from '@/lib/storage';
 import type { NotifPermission } from '@/lib/notifications';
 import { FREE_TASK_LIMIT } from '@/lib/types';
 
@@ -15,8 +18,16 @@ export default function App() {
   const { theme, themeKey, changeTheme, dark, toggleDark } = useTheme();
   const [notifStatus, setNotifStatus] = useState<NotifPermission>(() => getNotifPermission());
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, login, logout } = useAuth();
+  const [premium, setPremium] = useState<boolean>(() => storage.getPremium());
 
-  const schedule = useSchedule(notifStatus === 'granted');
+  const upgradeToPremium = useCallback(() => {
+    storage.setPremium(true);
+    setPremium(true);
+  }, []);
+
+  const schedule = useSchedule(notifStatus === 'granted', premium);
 
   const handleNotifRequest = useCallback(async () => {
     unlockAudio();
@@ -67,13 +78,16 @@ export default function App() {
       <Header
         dark={dark}
         toggleDark={toggleDark}
-        premium={schedule.premium}
+        premium={premium}
         theme={theme}
         themeKey={themeKey}
         changeTheme={changeTheme}
         notifStatus={notifStatus}
         onNotifRequest={handleNotifRequest}
         onOpenPremium={() => setPremiumModalOpen(true)}
+        user={user}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onLogout={logout}
       />
 
       <main className="relative max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -116,7 +130,7 @@ export default function App() {
         )}
 
         {/* Free tier notice */}
-        {!schedule.premium && (
+        {!premium && (
           <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800/60 ring-1 ring-gray-200 dark:ring-gray-700/60 animate-fade-in">
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 whitespace-nowrap">
               Bepul
@@ -156,7 +170,7 @@ export default function App() {
         </section>
 
         {/* Premium hero banner */}
-        {!schedule.premium && (
+        {!premium && (
           <section
             className="relative overflow-hidden rounded-3xl p-6 text-white animate-fade-in"
             style={{ background: `linear-gradient(135deg, ${theme.accentSoft}, ${theme.accent})` }}
@@ -184,9 +198,7 @@ export default function App() {
         )}
 
         <footer className="pt-2 pb-8 text-center">
-          <p className="text-xs text-gray-400 dark:text-gray-600">
-            Kun Tartibi â kundalik rejalashtirish ilovasi
-          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-600">Kun Tartibi — kundalik rejalashtirish ilovasi</p>
         </footer>
       </main>
 
@@ -194,7 +206,17 @@ export default function App() {
         open={premiumModalOpen}
         onClose={() => setPremiumModalOpen(false)}
         theme={theme}
-        onUpgrade={schedule.upgradeToPremium}
+        onUpgrade={upgradeToPremium}
+      />
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        theme={theme}
+        onLogin={(u) => {
+          login(u);
+          setAuthModalOpen(false);
+        }}
       />
     </div>
   );

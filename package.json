@@ -1,0 +1,11 @@
+{
+  "name": "vaqtly",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "postinstall": "npm --prefix project install",
+    "build": "npm --prefix project run build",
+    "typecheck": "npm --prefix project run typecheck",
+    "preview": "npm --prefix project run preview"
+  }
+}
